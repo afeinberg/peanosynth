@@ -1,22 +1,48 @@
+#![allow(unused_imports)]
 use cpal;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use dasp::{signal, Sample, Signal};
+use eframe::{egui, epi};
 use std::sync::mpsc;
 
-fn main() -> Result<(), anyhow::Error> {
-    let host = cpal::default_host();
-    let device = host
-        .default_output_device()
-        .expect("failed to find a default output device");
-    let config = device.default_output_config()?;
-
-    match config.sample_format() {
-        cpal::SampleFormat::F32 => run::<f32>(&device, &config.into())?,
-        cpal::SampleFormat::I16 => run::<i16>(&device, &config.into())?,
-        cpal::SampleFormat::U16 => run::<u16>(&device, &config.into())?,
+pub struct SynthApp {}
+impl epi::App for SynthApp {
+    fn name(&self) -> &str {
+        "Synth"
     }
 
-    Ok(())
+    fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
+        egui::CentralPanel::default().show(&ctx, |ui| {
+            let host = cpal::default_host();
+            let device = host
+                .default_output_device()
+                .expect("failed to find a default output device");
+            let config = device.default_output_config().unwrap();
+
+            if ui.button("play").clicked() {
+                let sample_format = config.sample_format();
+                if sample_format == cpal::SampleFormat::F32 {
+                    run::<f32>(&device, &config.into()).unwrap()
+                } else if sample_format == cpal::SampleFormat::I16 {
+                    run::<i16>(&device, &config.into()).unwrap()
+                } else {
+                    run::<u16>(&device, &config.into()).unwrap()
+                }
+            }
+        });
+    }
+}
+
+fn main() {
+    let mut ctx = egui::CtxRef::default();
+    let raw_input = egui::RawInput::default();
+    ctx.begin_frame(raw_input);
+    let app = SynthApp {};
+    let (_output, _what) = ctx.end_frame();
+    let options = eframe::NativeOptions {
+        ..Default::default()
+    };
+    eframe::run_native(Box::new(app), options);
 }
 
 fn run<T>(device: &cpal::Device, config: &cpal::StreamConfig) -> Result<(), anyhow::Error>

@@ -10,6 +10,8 @@ cpal = "0.12"
 dasp = { version = "0.11", features = ["all"] }
 find_folder = "0.3"
 hound = "3"
+egui = "*"
+eframe = "*"
 
 [[peanosynth]]
 name = "play_wav"
