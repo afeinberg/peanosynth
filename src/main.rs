@@ -3,6 +3,7 @@ use cpal;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use dasp::{signal, Sample, Signal};
 use eframe::{egui, epi};
+use egui::*;
 use std::sync::mpsc;
 
 pub struct SynthApp {}
@@ -18,15 +19,21 @@ impl epi::App for SynthApp {
                 .default_output_device()
                 .expect("failed to find a default output device");
             let config = device.default_output_config().unwrap();
-
+            let mut time: usize = 0;
+            ui.add(egui::Slider::new(&mut time, 0..=3600).text("time"));
+            if ui.button("set time").clicked() {
+                time += 1;
+            }
+            let immutable_time = time;
+            ui.label(format!("Time: {}", immutable_time));
             if ui.button("play").clicked() {
                 let sample_format = config.sample_format();
                 if sample_format == cpal::SampleFormat::F32 {
-                    run::<f32>(&device, &config.into()).unwrap()
+                    run::<f32>(&device, immutable_time, &config.into()).unwrap()
                 } else if sample_format == cpal::SampleFormat::I16 {
-                    run::<i16>(&device, &config.into()).unwrap()
+                    run::<i16>(&device, immutable_time, &config.into()).unwrap()
                 } else {
-                    run::<u16>(&device, &config.into()).unwrap()
+                    run::<u16>(&device, immutable_time, &config.into()).unwrap()
                 }
             }
         });
@@ -45,7 +52,11 @@ fn main() {
     eframe::run_native(Box::new(app), options);
 }
 
-fn run<T>(device: &cpal::Device, config: &cpal::StreamConfig) -> Result<(), anyhow::Error>
+fn run<T>(
+    device: &cpal::Device,
+    time: usize,
+    config: &cpal::StreamConfig,
+) -> Result<(), anyhow::Error>
 where
     T: cpal::Sample,
 {
@@ -55,7 +66,7 @@ where
     let mut synth = hz
         .clone()
         .sine()
-        .take(one_sec)
+        .take(one_sec * time)
         .chain(hz.clone().saw().take(one_sec))
         .chain(hz.clone().square().take(one_sec))
         .chain(hz.clone().noise_simplex().take(one_sec))
