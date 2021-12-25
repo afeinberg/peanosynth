@@ -1,0 +1,25 @@
+[package]
+name = "peanosynth"
+version = "0.1.0"
+authors = ["Alex Feinberg <alex@strlen.net>"]
+edition = "2018"
+
+[dependencies]
+anyhow = "*"
+cpal = "0.12"
+dasp = { version = "0.11", features = ["all"] }
+find_folder = "0.3"
+hound = "3"
+
+[[peanosynth]]
+name = "play_wav"
+path = "play_wav.rs"
+[[peanosynth]]
+name = "resample"
+path = "resample.rs"
+[[peanosynth]]
+name = "synth"
+path = "synth.rs"
+[[peanosynth]]
+name = "test"
+path = "test.rs"
