@@ -12,7 +12,7 @@ impl epi::App for SynthApp {
         "Synth"
     }
 
-    fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
+    fn update(&mut self, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
         egui::CentralPanel::default().show(&ctx, |ui| {
             let host = cpal::default_host();
             let device = host
