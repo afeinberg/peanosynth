@@ -6,37 +6,39 @@ use eframe::{egui, epi};
 use egui::*;
 use std::sync::mpsc;
 
-pub struct SynthApp {}
+// TODO: Move more parameters to this state.
+pub struct SynthApp {
+    time: usize,
+}
 impl epi::App for SynthApp {
     fn name(&self) -> &str {
         "Synth"
     }
 
-    fn update(&mut self, ctx: &egui::CtxRef, _frame: &mut epi::Frame<'_>) {
+    fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
         egui::CentralPanel::default().show(&ctx, |ui| {
             let host = cpal::default_host();
             let device = host
                 .default_output_device()
                 .expect("failed to find a default output device");
             let config = device.default_output_config().unwrap();
-            let mut time: usize = 0;
-            ui.add(egui::Slider::new(&mut time, 0..=3600).text("time"));
-            if ui.button("set time").clicked() {
-                time += 1;
-            }
-            let immutable_time = time;
-            ui.label(format!("Time: {}", immutable_time));
-            if ui.button("play").clicked() {
+            ui.horizontal( |ui| {
+                ui.label("Time: ");
+                ui.add(egui::Slider::new(&mut self.time, 0..=60));
+            });
+            if ui.button("Play").clicked() {
                 let sample_format = config.sample_format();
                 if sample_format == cpal::SampleFormat::F32 {
-                    run::<f32>(&device, immutable_time, &config.into()).unwrap()
+                    run::<f32>(&device, self.time, &config.into()).unwrap()
                 } else if sample_format == cpal::SampleFormat::I16 {
-                    run::<i16>(&device, immutable_time, &config.into()).unwrap()
+                    run::<i16>(&device, self.time, &config.into()).unwrap()
                 } else {
-                    run::<u16>(&device, immutable_time, &config.into()).unwrap()
+                    run::<u16>(&device, self.time, &config.into()).unwrap()
                 }
             }
+            ui.label(format!("Time: {} seconds", self.time))
         });
+        frame.set_window_size(ctx.used_size())
     }
 }
 
@@ -44,7 +46,7 @@ fn main() {
     let mut ctx = egui::CtxRef::default();
     let raw_input = egui::RawInput::default();
     ctx.begin_frame(raw_input);
-    let app = SynthApp {};
+    let app = SynthApp { time: 2 };
     let (_output, _what) = ctx.end_frame();
     let options = eframe::NativeOptions {
         ..Default::default()
@@ -52,6 +54,8 @@ fn main() {
     eframe::run_native(Box::new(app), options);
 }
 
+// TODO: Allow passing in the chain as configuration. Make this part of application
+// state.
 fn run<T>(
     device: &cpal::Device,
     time: usize,
@@ -62,15 +66,15 @@ where
 {
     // Create a signal chain to play back 1 second of each oscillator at A4.
     let hz = signal::rate(config.sample_rate.0 as f64).const_hz(440.0);
-    let one_sec = config.sample_rate.0 as usize;
+    let time_scaled = config.sample_rate.0 as usize * time;
     let mut synth = hz
         .clone()
         .sine()
-        .take(one_sec * time)
-        .chain(hz.clone().saw().take(one_sec))
-        .chain(hz.clone().square().take(one_sec))
-        .chain(hz.clone().noise_simplex().take(one_sec))
-        .chain(signal::noise(0).take(one_sec))
+        .take(time_scaled)
+        .chain(hz.clone().saw().take(time_scaled))
+        .chain(hz.clone().square().take(time_scaled))
+        .chain(hz.clone().noise_simplex().take(time_scaled))
+        .chain(signal::noise(0).take(time_scaled))
         .map(|s| s.to_sample::<f32>() * 0.2);
 
     // A channel for indicating when playback has completed.
