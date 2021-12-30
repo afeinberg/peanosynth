@@ -13,15 +13,3 @@ hound = "3"
 egui = "*"
 eframe = "*"
 
-[[peanosynth]]
-name = "play_wav"
-path = "play_wav.rs"
-[[peanosynth]]
-name = "resample"
-path = "resample.rs"
-[[peanosynth]]
-name = "synth"
-path = "synth.rs"
-[[peanosynth]]
-name = "test"
-path = "test.rs"
