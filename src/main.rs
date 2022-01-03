@@ -8,12 +8,29 @@ const TRACK_REGION_LENGTH: usize = 5;
 
 pub struct Project {
     time: usize,
+    sequence: Vec<Waveform>,
+}
+
+#[derive(Clone)]
+pub enum Waveform {
+    Sine,
+    Saw,
+    Square,
+    Noise,
+    NoiseSimplex,
 }
 
 impl Default for Project {
     fn default() -> Self {
         Project {
             time: TRACK_REGION_LENGTH,
+            sequence: vec![
+                Waveform::Sine,
+                Waveform::Saw,
+                Waveform::Square,
+                Waveform::Noise,
+                Waveform::NoiseSimplex
+            ]
         }
     }
 }
@@ -59,6 +76,34 @@ impl SynthApp {
         }
     }
 
+    fn signals_from_sequence(&self) -> impl Iterator<Item = f64> {
+        let time = self.track.time;
+        let config = &self.device.config;
+        let hz = signal::rate(config.sample_rate.0 as f64).const_hz(440.0);
+        let time_scaled = config.sample_rate.0 as usize * time;
+        self.track
+            .sequence
+            .iter()
+            .cloned()
+            .fold(
+                signal::equilibrium().take(0).collect::<Vec<f64>>(),
+                |acc, w| {
+                    let v: Vec<f64> = match w {
+                        Waveform::Sine => hz.clone().sine().take(time_scaled).collect(),
+                        Waveform::Saw => hz.clone().saw().take(time_scaled).collect(),
+                        Waveform::Square => hz.clone().square().take(time_scaled).collect(),
+                        Waveform::NoiseSimplex => {
+                            hz.clone().noise_simplex().take(time_scaled).collect()
+                        }
+                        Waveform::Noise => signal::noise(0).take(time_scaled).collect(),
+                    };
+                    acc.into_iter().chain(v.into_iter()).collect()
+                },
+            )
+            .into_iter()
+    }
+
+    /*
     fn build_signals(&self) -> impl Iterator<Item = f64> {
         let time = self.track.time;
         let config = &self.device.config;
@@ -71,7 +116,7 @@ impl SynthApp {
             .chain(hz.clone().square().take(time_scaled))
             .chain(hz.clone().noise_simplex().take(time_scaled))
             .chain(signal::noise(0).take(time_scaled))
-    }
+    } */
 
     fn run<T>(&self) -> Result<(), anyhow::Error>
     where
@@ -80,7 +125,7 @@ impl SynthApp {
         let device = &self.device.device;
         let config = &self.device.config;
         // Create a signal chain to play back 1 second of each oscillator at A4.
-        let signals = self.build_signals();
+        let signals = self.signals_from_sequence();
         let mut synth = signals.map(|s| s.to_sample::<f32>() * 0.2);
 
         // A channel for indicating when playback has completed.
