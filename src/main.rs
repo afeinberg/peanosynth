@@ -59,25 +59,29 @@ impl SynthApp {
         }
     }
 
-    fn run<T>(&self) -> Result<(), anyhow::Error>
-    where
-        T: cpal::Sample,
-    {
+    fn build_signals(&self) -> impl Iterator<Item = f64> {
         let time = self.track.time;
-        let device = &self.device.device;
         let config = &self.device.config;
-        // Create a signal chain to play back 1 second of each oscillator at A4.
         let hz = signal::rate(config.sample_rate.0 as f64).const_hz(440.0);
         let time_scaled = config.sample_rate.0 as usize * time;
-        let mut synth = hz
-            .clone()
+        hz.clone()
             .sine()
             .take(time_scaled)
             .chain(hz.clone().saw().take(time_scaled))
             .chain(hz.clone().square().take(time_scaled))
             .chain(hz.clone().noise_simplex().take(time_scaled))
             .chain(signal::noise(0).take(time_scaled))
-            .map(|s| s.to_sample::<f32>() * 0.2);
+    }
+
+    fn run<T>(&self) -> Result<(), anyhow::Error>
+    where
+        T: cpal::Sample,
+    {
+        let device = &self.device.device;
+        let config = &self.device.config;
+        // Create a signal chain to play back 1 second of each oscillator at A4.
+        let signals = self.build_signals();
+        let mut synth = signals.map(|s| s.to_sample::<f32>() * 0.2);
 
         // A channel for indicating when playback has completed.
         let (complete_tx, complete_rx) = mpsc::sync_channel(1);
