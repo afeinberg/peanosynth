@@ -1,0 +1,4 @@
+{
+    "time": 5,
+    "sequence": ["Sine", "Saw", "Square", "Noise", "NoiseSimplex"]
+}

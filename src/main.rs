@@ -3,15 +3,18 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use dasp::{signal, Sample, Signal};
 use eframe::{egui, epi};
 use std::sync::mpsc;
+use env_logger::Env;
+use log::info;
+use serde::{Serialize, Deserialize};
+use serde_json;
 
-const TRACK_REGION_LENGTH: usize = 5;
-
+#[derive(Serialize, Deserialize)]
 pub struct Project {
     time: usize,
     sequence: Vec<Waveform>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Waveform {
     Sine,
     Saw,
@@ -22,16 +25,9 @@ pub enum Waveform {
 
 impl Default for Project {
     fn default() -> Self {
-        Project {
-            time: TRACK_REGION_LENGTH,
-            sequence: vec![
-                Waveform::Sine,
-                Waveform::Saw,
-                Waveform::Square,
-                Waveform::Noise,
-                Waveform::NoiseSimplex
-            ]
-        }
+        let default_project = include_str!("default_project.json");
+        let p: Project = serde_json::from_str(default_project).unwrap();
+        p
     }
 }
 
@@ -56,16 +52,21 @@ impl AudioDevice {
 }
 
 pub struct SynthApp {
-    track: Project,
+    project: Project,
     device: AudioDevice,
 }
 
 impl SynthApp {
     pub fn new() -> Self {
         Self {
-            track: Project::default(),
+            project: Project::default(),
             device: AudioDevice::default_device().unwrap(),
         }
+    }
+
+    pub fn serialize_project(&self) -> String {
+        let s = serde_json::to_string(&self.project);
+        return s.unwrap();
     }
 
     pub fn play(&self) -> Result<(), anyhow::Error> {
@@ -77,11 +78,11 @@ impl SynthApp {
     }
 
     fn signals_from_sequence(&self) -> impl Iterator<Item = f64> {
-        let time = self.track.time;
+        let time = self.project.time;
         let config = &self.device.config;
         let hz = signal::rate(config.sample_rate.0 as f64).const_hz(440.0);
         let time_scaled = config.sample_rate.0 as usize * time;
-        self.track
+        self.project
             .sequence
             .iter()
             .cloned()
@@ -105,7 +106,7 @@ impl SynthApp {
 
     /*
     fn build_signals(&self) -> impl Iterator<Item = f64> {
-        let time = self.track.time;
+        let time = self.project.time;
         let config = &self.device.config;
         let hz = signal::rate(config.sample_rate.0 as f64).const_hz(440.0);
         let time_scaled = config.sample_rate.0 as usize * time;
@@ -160,12 +161,12 @@ impl epi::App for SynthApp {
         egui::CentralPanel::default().show(&ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Time: ");
-                ui.add(egui::Slider::new(&mut self.track.time, 0..=60));
+                ui.add(egui::Slider::new(&mut self.project.time, 0..=60));
             });
             if ui.button("Play").clicked() {
                 self.play().unwrap();
             }
-            ui.label(format!("Time: {} seconds", self.track.time))
+            ui.label(format!("Time: {} seconds", self.project.time))
         });
         frame.set_window_size(ctx.used_size())
     }
@@ -195,10 +196,12 @@ fn write_data<T>(
 }
 
 fn main() {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let mut ctx = egui::CtxRef::default();
     let raw_input = egui::RawInput::default();
     ctx.begin_frame(raw_input);
     let app = SynthApp::new();
+    info!("{}", app.serialize_project());
     let (_output, _what) = ctx.end_frame();
     let options = eframe::NativeOptions {
         ..Default::default()
