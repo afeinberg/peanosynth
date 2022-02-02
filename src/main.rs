@@ -2,11 +2,11 @@ use cpal;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use dasp::{signal, Sample, Signal};
 use eframe::{egui, epi};
-use std::sync::mpsc;
 use env_logger::Env;
 use log::info;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json;
+use std::sync::mpsc;
 
 #[derive(Serialize, Deserialize)]
 pub struct Project {
@@ -26,8 +26,7 @@ pub enum Waveform {
 impl Default for Project {
     fn default() -> Self {
         let default_project = include_str!("default_project.json");
-        let p: Project = serde_json::from_str(default_project).unwrap();
-        p
+        serde_json::from_str::<Self>(default_project).unwrap()
     }
 }
 
@@ -65,8 +64,7 @@ impl SynthApp {
     }
 
     pub fn serialize_project(&self) -> String {
-        let s = serde_json::to_string(&self.project);
-        return s.unwrap();
+        serde_json::to_string(&self.project).unwrap()
     }
 
     pub fn play(&self) -> Result<(), anyhow::Error> {
