@@ -1,11 +1,13 @@
-use cpal;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use dasp::{signal, Sample, Signal};
 use eframe::{egui, epi};
 use env_logger::Env;
 use log::info;
 use serde::{Deserialize, Serialize};
-use serde_json;
+use std::convert::TryFrom;
+use std::env;
+use std::error;
+use std::fs;
 use std::sync::mpsc;
 
 #[derive(Serialize, Deserialize)]
@@ -30,6 +32,15 @@ impl Default for Project {
     }
 }
 
+impl TryFrom<String> for Project {
+    type Error = Box<dyn error::Error>;
+
+    fn try_from(path: String) -> Result<Self, Self::Error> {
+        let project_json = fs::read_to_string(path)?;
+        let result = serde_json::from_str::<Self>(project_json.as_str())?;
+        Ok(result)
+    }
+}
 pub struct AudioDevice {
     device: cpal::Device,
     sample_format: cpal::SampleFormat,
@@ -56,9 +67,9 @@ pub struct SynthApp {
 }
 
 impl SynthApp {
-    pub fn new() -> Self {
+    pub fn new(path: Option<String>) -> Self {
         Self {
-            project: Project::default(),
+            project: path.map_or_else(Project::default, |p| Project::try_from(p).unwrap()),
             device: AudioDevice::default_device().unwrap(),
         }
     }
@@ -141,7 +152,7 @@ impl epi::App for SynthApp {
     }
 
     fn update(&mut self, ctx: &egui::CtxRef, frame: &mut epi::Frame<'_>) {
-        egui::CentralPanel::default().show(&ctx, |ui| {
+        egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Time: ");
                 ui.add(egui::Slider::new(&mut self.project.time, 0..=60));
@@ -183,7 +194,8 @@ fn main() {
     let mut ctx = egui::CtxRef::default();
     let raw_input = egui::RawInput::default();
     ctx.begin_frame(raw_input);
-    let app = SynthApp::new();
+    let args = env::args().collect::<Vec<String>>();
+    let app = SynthApp::new(args.get(1).cloned());
     info!("{}", app.serialize_project());
     let (_output, _what) = ctx.end_frame();
     let options = eframe::NativeOptions {
