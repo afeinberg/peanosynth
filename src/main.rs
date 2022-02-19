@@ -102,21 +102,6 @@ impl SynthApp {
             .into_iter()
     }
 
-    /*
-    fn build_signals(&self) -> impl Iterator<Item = f64> {
-        let time = self.project.time;
-        let config = &self.device.config;
-        let hz = signal::rate(config.sample_rate.0 as f64).const_hz(440.0);
-        let time_scaled = config.sample_rate.0 as usize * time;
-        hz.clone()
-            .sine()
-            .take(time_scaled)
-            .chain(hz.clone().saw().take(time_scaled))
-            .chain(hz.clone().square().take(time_scaled))
-            .chain(hz.clone().noise_simplex().take(time_scaled))
-            .chain(signal::noise(0).take(time_scaled))
-    } */
-
     fn run<T>(&self) -> Result<(), anyhow::Error>
     where
         T: cpal::Sample,
