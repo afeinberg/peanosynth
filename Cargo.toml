@@ -4,6 +4,14 @@ version = "0.1.0"
 authors = ["Alex Feinberg <alex@strlen.net>"]
 edition = "2018"
 
+[lib]
+name = "peanosynth"
+path = "src/lib.rs"
+
+[[bin]]
+name = "peanosynth"
+path = "src/main.rs"
+
 [dependencies]
 anyhow = "*"
 cpal = "0.12"
