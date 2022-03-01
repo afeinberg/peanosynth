@@ -3,44 +3,13 @@ use dasp::{signal, Sample, Signal};
 use eframe::{egui, epi};
 use env_logger::Env;
 use log::info;
-use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::env;
-use std::error;
-use std::fs;
 use std::sync::mpsc;
 
-#[derive(Serialize, Deserialize)]
-pub struct Project {
-    time: usize,
-    sequence: Vec<Waveform>,
-}
+use peanosynth::{Project, Waveform};
 
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Waveform {
-    Sine,
-    Saw,
-    Square,
-    Noise,
-    NoiseSimplex,
-}
 
-impl Default for Project {
-    fn default() -> Self {
-        let default_project = include_str!("default_project.json");
-        serde_json::from_str::<Self>(default_project).unwrap()
-    }
-}
-
-impl TryFrom<String> for Project {
-    type Error = Box<dyn error::Error>;
-
-    fn try_from(path: String) -> Result<Self, Self::Error> {
-        let project_json = fs::read_to_string(path)?;
-        let result = serde_json::from_str::<Self>(project_json.as_str())?;
-        Ok(result)
-    }
-}
 pub struct AudioDevice {
     device: cpal::Device,
     sample_format: cpal::SampleFormat,
@@ -92,20 +61,20 @@ impl SynthApp {
         let hz = signal::rate(config.sample_rate.0 as f64).const_hz(440.0);
         let time_scaled = config.sample_rate.0 as usize * time;
         self.project
-            .sequence
+            .sequence()
             .iter()
             .cloned()
             .fold(
                 signal::equilibrium().take(0).collect::<Vec<f64>>(),
                 |acc, w| {
                     let v: Vec<f64> = match w {
-                        Waveform::Sine => hz.clone().sine().take(time_scaled).collect(),
-                        Waveform::Saw => hz.clone().saw().take(time_scaled).collect(),
-                        Waveform::Square => hz.clone().square().take(time_scaled).collect(),
-                        Waveform::NoiseSimplex => {
+                        Waveform::Sine(_) => hz.clone().sine().take(time_scaled).collect(),
+                        Waveform::Saw(_) => hz.clone().saw().take(time_scaled).collect(),
+                        Waveform::Square(_) => hz.clone().square().take(time_scaled).collect(),
+                        Waveform::NoiseSimplex(_) => {
                             hz.clone().noise_simplex().take(time_scaled).collect()
                         }
-                        Waveform::Noise => signal::noise(0).take(time_scaled).collect(),
+                        Waveform::Noise(_) => signal::noise(0).take(time_scaled).collect(),
                     };
                     acc.into_iter().chain(v.into_iter()).collect()
                 },

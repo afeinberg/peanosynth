@@ -1,4 +1,4 @@
 {
     "time": 5,
-    "sequence": ["Sine", "Saw", "Square", "Noise", "NoiseSimplex", "Noise"]
+    "sequence": [{"Sine": {"time": 2}}, {"Saw": {"time": 3}} ]
 }
