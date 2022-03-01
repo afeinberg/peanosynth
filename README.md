@@ -17,6 +17,6 @@ and the [Peano Axioms](https://en.wikipedia.org/wiki/Peano_axioms).
 In order of priority:
 
 1. UI for chaining and composing variable length signals
-2. Add ability to save and load projects
+2. Add ability to save projects
 3. Add ability to export to audio files
 4. Basic visualization
