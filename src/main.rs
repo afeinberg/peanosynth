@@ -9,7 +9,6 @@ use std::sync::mpsc;
 
 use peanosynth::{Project, Waveform};
 
-
 pub struct AudioDevice {
     device: cpal::Device,
     sample_format: cpal::SampleFormat,

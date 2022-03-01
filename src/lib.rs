@@ -49,7 +49,7 @@ impl TryFrom<String> for Project {
 
 impl Project {
     pub fn sequence(&self) -> &[Waveform] {
-        return &self.sequence;
+        &self.sequence
     }
 }
 
